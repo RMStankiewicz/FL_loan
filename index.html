@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Odsetek Kredytowych</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .data-tables-container { max-height: 400px; overflow-y: auto; }
+        .data-tables-container::-webkit-scrollbar { width: 8px; }
+        .data-tables-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .data-tables-container::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .data-tables-container::-webkit-scrollbar-thumb:hover { background: #555; }
+        th { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
+            border-radius: 50%; width: 24px; height: 24px;
+            animation: spin 1s linear infinite; display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input[type="file"] { display: none; }
+    </style>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">Kalkulator Odsetek Kredytowych</h1>
+            <p class="text-slate-600 mt-2">Aplikacja do analizy pożyczki z dnia 28 listopada 2022 r.</p>
+        </header>
+
+        <div id="alert-banner" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+            <strong class="font-bold">Błąd!</strong>
+            <span class="block sm:inline" id="alert-message"></span>
+        </div>
+        
+        <div id="success-banner" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+            <strong class="font-bold">Sukces!</strong>
+            <span class="block sm:inline" id="success-message"></span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-slate-900 border-b pb-2">Panel Sterowania</h2>
+                <div class="space-y-6">
+                    <div class="bg-slate-100 p-4 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-slate-700">Aktualna stopa lombardowa:</span>
+                            <span id="lombard-rate-display" class="font-bold text-lg text-blue-600"><div class="loader"></div></span>
+                        </div>
+                         <div id="rate-history-panel" class="text-xs text-slate-500 mt-2 pt-2 border-t border-slate-300 space-y-1">
+                            <!-- Dynamicznie generowana historia stóp -->
+                        </div>
+                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-300">
+                            <span class="font-medium text-slate-700">Oprocentowanie umowne:</span>
+                            <span id="interest-rate-display" class="font-bold text-lg text-blue-600">...</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-300">
+                            <span class="font-medium text-slate-700">Obniżone na podstawie ostatniej zmiany o:</span>
+                            <span id="last-reduction-display" class="font-bold text-lg text-green-600">...</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-medium text-slate-700">Oprocentowanie aktualnie obowiązujące:</span>
+                            <span id="effective-rate-display" class="font-bold text-lg text-green-600">...</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-slate-800">Zarządzanie Danymi (XML)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label for="import-xml-input" class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-700 transition-colors text-center cursor-pointer">Importuj z Pliku</label>
+                            <input type="file" id="import-xml-input" accept=".xml,application/xml">
+                            <button id="export-xml-btn" class="w-full bg-sky-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-sky-700 transition-colors">Eksportuj do Pliku</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-slate-800">Dodaj transakcję kapitałową</h3>
+                        <div class="space-y-3">
+                            <input type="number" id="trans-amount" placeholder="Kwota (PLN)" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="date" id="trans-date" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <select id="trans-type" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="increase">Zwiększenie kapitału (Wpłata)</option>
+                                <option value="repayment">Spłata kapitału</option>
+                            </select>
+                            <button id="add-transaction-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Dodaj Transakcję</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-slate-800">Zadeklaruj nową obniżkę</h3>
+                        <p class="text-xs text-slate-500 mb-2">Obniżka będzie obowiązywać od początku kwartału, w którym wypada podana data.</p>
+                         <div class="space-y-3">
+                             <input type="date" id="reduction-declaration-date" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <input type="number" id="reduction-value" step="0.01" placeholder="Wartość nowej obniżki (%)" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <button id="set-reduction-btn" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Zadeklaruj Obniżkę</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-2xl font-semibold mb-4 text-slate-900 border-b pb-2">Obliczenia i Raporty</h2>
+                <div class="space-y-4">
+                    <div class="flex flex-col md:flex-row items-center gap-4">
+                        <select id="period-type-selector" class="block w-full md:w-auto px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="day">Dzień</option>
+                            <option value="month">Miesiąc</option>
+                            <option value="quarter">Kwartał</option>
+                            <option value="year">Rok</option>
+                        </select>
+                        <div id="date-inputs-container" class="flex-grow flex items-center gap-4"></div>
+                        <button id="calculate-btn" class="w-full md:w-auto flex-shrink-0 bg-slate-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-900 transition-colors">Oblicz</button>
+                    </div>
+                    <div id="result-container" class="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-r-lg mt-6">
+                        <p class="text-lg">Naliczone odsetki dla wybranego okresu:</p>
+                        <p id="interest-result" class="text-4xl font-bold mt-2">0.00 PLN</p>
+                        <div id="calculation-details" class="mt-4 pt-4 border-t border-blue-200 text-sm space-y-2"></div>
+                         <div id="calculation-warning" class="hidden mt-4 pt-2 border-t border-blue-200 text-sm font-semibold text-amber-700"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-xl font-semibold mb-4 text-slate-800">Historia Transakcji Kapitałowych</h3>
+                <div class="data-tables-container"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-slate-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Data</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Typ</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Kwota (PLN)</th><th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Akcja</th></tr></thead><tbody id="transactions-table-body" class="bg-white divide-y divide-slate-200"></tbody></table></div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="text-xl font-semibold mb-4 text-slate-800">Historia Deklaracji Obniżek</h3>
+                <div class="data-tables-container"><table class="min-w-full divide-y divide-slate-200"><thead class="bg-slate-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Data Deklaracji</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Wartość Obniżki</th><th class="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Akcja</th></tr></thead><tbody id="reductions-table-body" class="bg-white divide-y divide-slate-200"></tbody></table></div>
+            </div>
+        </div>
+        <footer class="text-center mt-8 text-sm text-slate-500"><p>&copy; 2024-2025 Kalkulator Kredytowy. Wszelkie prawa zastrzeżone.</p></footer>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const elements = {
+        lombardRateDisplay: document.getElementById('lombard-rate-display'),
+        interestRateDisplay: document.getElementById('interest-rate-display'),
+        lastReductionDisplay: document.getElementById('last-reduction-display'),
+        effectiveRateDisplay: document.getElementById('effective-rate-display'),
+        rateHistoryPanel: document.getElementById('rate-history-panel'),
+        addTransactionBtn: document.getElementById('add-transaction-btn'),
+        setReductionBtn: document.getElementById('set-reduction-btn'),
+        transactionsTableBody: document.getElementById('transactions-table-body'),
+        reductionsTableBody: document.getElementById('reductions-table-body'),
+        interestResult: document.getElementById('interest-result'),
+        calculationDetails: document.getElementById('calculation-details'),
+        calculationWarning: document.getElementById('calculation-warning'),
+        importXmlInput: document.getElementById('import-xml-input'),
+        exportXmlBtn: document.getElementById('export-xml-btn'),
+        transAmount: document.getElementById('trans-amount'),
+        transDate: document.getElementById('trans-date'),
+        transType: document.getElementById('trans-type'),
+        reductionDeclarationDate: document.getElementById('reduction-declaration-date'),
+        reductionValue: document.getElementById('reduction-value'),
+        alertBanner: document.getElementById('alert-banner'),
+        alertMessage: document.getElementById('alert-message'),
+        successBanner: document.getElementById('success-banner'),
+        successMessage: document.getElementById('success-message'),
+        periodTypeSelector: document.getElementById('period-type-selector'),
+        dateInputsContainer: document.getElementById('date-inputs-container'),
+        calculateBtn: document.getElementById('calculate-btn'),
+    };
+
+    let state = {
+        transactions: [],
+        reductionDeclarations: [],
+        nbpRateHistory: [], // [{date: 'YYYY-MM-DD', value: Number}]
+        rateCache: {}, // from XML, for offline/verification
+        isCalculating: false,
+    };
+    
+    const showAlert = (message, type = 'error') => {
+        const banner = type === 'error' ? elements.alertBanner : elements.successBanner;
+        const messageEl = type === 'error' ? elements.alertMessage : elements.successMessage;
+        messageEl.textContent = message;
+        banner.classList.remove('hidden');
+        setTimeout(() => banner.classList.add('hidden'), 5000);
+    };
+    
+    const formatCurrency = (value) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(value);
+    const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    const getDaysInYear = (year) => isLeapYear(year) ? 366 : 365;
+
+    const toggleCalculationState = (isCalculating) => {
+        state.isCalculating = isCalculating;
+        elements.calculateBtn.disabled = isCalculating;
+        if (isCalculating) {
+            elements.interestResult.innerHTML = '<div class="loader mx-auto"></div>';
+            elements.calculationDetails.innerHTML = '';
+            elements.calculationWarning.classList.add('hidden');
+        }
+    };
+    
+    const renderRateHistoryPanel = () => {
+        const panel = elements.rateHistoryPanel;
+        panel.innerHTML = '';
+        if (state.nbpRateHistory.length < 1) return;
+
+        const history = [...state.nbpRateHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const latest = history[0];
+        const previous = history[1];
+        const earlier = history[2];
+
+        panel.innerHTML += `<div>obowiązuje od: <strong>${latest.date}</strong></div>`;
+        if (previous) {
+            const prevEndDate = new Date(latest.date);
+            prevEndDate.setDate(prevEndDate.getDate() - 1);
+            panel.innerHTML += `<div>Poprzednia: <strong>${previous.value.toFixed(2)}%</strong> (od ${previous.date} do ${prevEndDate.toISOString().split('T')[0]})</div>`;
+        }
+        if (earlier) {
+             const earlierEndDate = new Date(previous.date);
+            earlierEndDate.setDate(earlierEndDate.getDate() - 1);
+            panel.innerHTML += `<div>Wcześniejsza: <strong>${earlier.value.toFixed(2)}%</strong> (od ${earlier.date} do ${earlierEndDate.toISOString().split('T')[0]})</div>`;
+        }
+    };
+    
+    const updateCurrentRateDisplay = () => {
+        if(state.nbpRateHistory.length === 0) return;
+        const latestRateInfo = state.nbpRateHistory[state.nbpRateHistory.length - 1];
+        const currentLombardRate = latestRateInfo.value;
+        const contractualRate = Math.max(currentLombardRate * 4, 10.0);
+        
+        elements.lombardRateDisplay.textContent = `${currentLombardRate.toFixed(2)}%`;
+        elements.interestRateDisplay.textContent = `${contractualRate.toFixed(2)}%`;
+
+        const lastDeclaredValue = state.reductionDeclarations.length > 0 ? 
+            [...state.reductionDeclarations].sort((a, b) => new Date(b.date) - new Date(a.date))[0].value : 0;
+        const appliedReduction = Math.min(lastDeclaredValue, contractualRate);
+        const effectiveRate = contractualRate - appliedReduction;
+
+        elements.lastReductionDisplay.textContent = `${lastDeclaredValue.toFixed(2)}%`;
+        elements.effectiveRateDisplay.textContent = `${effectiveRate.toFixed(2)}%`;
+    };
+
+    const fetchFullRateHistory = async () => {
+        const url = "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml";
+        const proxyUrl = 'https://api.allorigins.win/raw?url=';
+         try {
+            const response = await fetch(`${proxyUrl}${encodeURIComponent(url)}`);
+            if (!response.ok) {
+                throw new Error(`Błąd HTTP! Status: ${response.status}`);
+            }
+            const xmlText = await response.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+
+            if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                throw new Error("Błąd parsowania pliku XML z NBP.");
+            }
+            
+            const rateHistory = [];
+            const allPositions = xmlDoc.querySelectorAll('pozycje');
+
+            allPositions.forEach(positionsNode => {
+                const validFromDate = positionsNode.getAttribute('obowiazuje_od');
+                const lombardNode = positionsNode.querySelector('pozycja[id="lom"]');
+
+                if (lombardNode) {
+                    const rateStr = lombardNode.getAttribute('oprocentowanie');
+                    if (rateStr) {
+                         const rate = parseFloat(rateStr.replace(',', '.'));
+                         rateHistory.push({ date: validFromDate, value: rate });
+                    }
+                }
+            });
+            
+            state.nbpRateHistory = rateHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            Object.keys(state.rateCache).forEach(date => {
+                const nbpRate = state.nbpRateHistory.find(r => r.date === date);
+                const xmlRate = state.rateCache[date];
+                if(nbpRate && nbpRate.value !== xmlRate) {
+                    showAlert(`Niezgodność danych dla daty ${date}! Stopa w pliku XML: ${xmlRate}%, oficjalna stopa NBP: ${nbpRate.value}%. Proszę o kontakt z Radosławem Stankiewiczem.`);
+                }
+            });
+            
+            renderRateHistoryPanel();
+            updateCurrentRateDisplay();
+
+        } catch (error) {
+            showAlert(`Nie udało się pobrać historii stóp procentowych: ${error.message}`);
+        }
+    };
+    
+    const getRateForDate = (dateStr) => {
+        const history = state.nbpRateHistory.length > 0 ? state.nbpRateHistory : 
+            Object.entries(state.rateCache).map(([date, value]) => ({date, value})).sort((a,b) => new Date(a.date) - new Date(b.date));
+
+        if (history.length === 0) return 5.75;
+        
+        const applicableRates = history.filter(r => new Date(r.date) <= new Date(dateStr));
+        if (applicableRates.length === 0) return history[0].value;
+
+        return applicableRates[applicableRates.length - 1].value;
+    };
+    
+    const saveData = () => {
+        localStorage.setItem('loanCalculatorTransactions', JSON.stringify(state.transactions));
+        localStorage.setItem('loanCalculatorReductions', JSON.stringify(state.reductionDeclarations));
+    };
+
+    const loadData = () => {
+        const savedTransactions = localStorage.getItem('loanCalculatorTransactions');
+        const savedReductions = localStorage.getItem('loanCalculatorReductions');
+        state.transactions = savedTransactions ? JSON.parse(savedTransactions) : [];
+        state.reductionDeclarations = savedReductions ? JSON.parse(savedReductions) : [];
+        renderTables();
+    };
+
+    const renderTables = () => {
+        renderTransactionsTable();
+        renderReductionsTable();
+    };
+
+    const renderTransactionsTable = () => {
+        elements.transactionsTableBody.innerHTML = '';
+        if (state.transactions.length === 0) {
+            elements.transactionsTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-slate-500 py-4">Brak transakcji</td></tr>`;
+            return;
+        }
+        const sorted = [...state.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+        sorted.forEach((trans, index) => {
+            row = document.createElement('tr');
+            row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-800">${trans.date}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-800">${trans.type === 'increase' ? 'Zwiększenie' : 'Spłata'}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${trans.type === 'increase' ? 'text-green-600' : 'text-red-600'}">${formatCurrency(trans.amount)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button class="delete-btn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" data-type="transaction" data-index="${index}">Usuń</button></td>`;
+            elements.transactionsTableBody.appendChild(row);
+        });
+    };
+
+    const renderReductionsTable = () => {
+        elements.reductionsTableBody.innerHTML = '';
+        if (state.reductionDeclarations.length === 0) {
+            elements.reductionsTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-slate-500 py-4">Brak deklaracji obniżek</td></tr>`;
+            return;
+        }
+        const sorted = [...state.reductionDeclarations].sort((a, b) => new Date(a.date) - new Date(b.date));
+        sorted.forEach((dec, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm text-slate-800">${dec.date}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${dec.value.toFixed(2)}%</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button class="delete-btn bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" data-type="reduction" data-index="${index}">Usuń</button></td>`;
+            elements.reductionsTableBody.appendChild(row);
+        });
+    };
+
+    const getAppliedReductionForDate = (date, contractualRate) => {
+        const searchDate = new Date(date);
+        
+        const applicableDeclarations = state.reductionDeclarations
+            .filter(d => new Date(d.date) <= searchDate);
+            
+        if (applicableDeclarations.length === 0) return 0;
+        
+        applicableDeclarations.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const lastDeclaredValue = applicableDeclarations[0].value;
+        
+        return Math.min(lastDeclaredValue, contractualRate);
+    };
+
+    const getBalanceOnDate = (date) => state.transactions.filter(t => new Date(t.date) <= date).reduce((bal, t) => bal + (t.type === 'increase' ? t.amount : -t.amount), 0);
+
+    const calculateInterestForPeriod = (startDateStr, endDateStr) => {
+        toggleCalculationState(true);
+        let totalInterest = 0;
+        const subPeriods = [];
+        let currentSubPeriod = null;
+
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const currentDate = new Date(d);
+            const balance = getBalanceOnDate(currentDate);
+            if (balance <= 0) continue;
+            
+            const lombardRate = getRateForDate(currentDate.toISOString().split('T')[0]);
+            const contractualRate = Math.max(lombardRate * 4, 10.0);
+            const appliedReduction = getAppliedReductionForDate(currentDate, contractualRate);
+            const effectiveRate = contractualRate - appliedReduction;
+            const dailyInterest = (balance * (effectiveRate / 100)) / getDaysInYear(currentDate.getFullYear());
+            totalInterest += dailyInterest;
+            
+            if (!currentSubPeriod || currentSubPeriod.contractualRate.toFixed(2) !== contractualRate.toFixed(2) || currentSubPeriod.reduction.toFixed(2) !== appliedReduction.toFixed(2)) {
+                if (currentSubPeriod) subPeriods.push(currentSubPeriod);
+                currentSubPeriod = {
+                    startDate: new Date(currentDate),
+                    endDate: new Date(currentDate),
+                    contractualRate: contractualRate,
+                    reduction: appliedReduction,
+                };
+            } else {
+                currentSubPeriod.endDate = new Date(currentDate);
+            }
+        }
+        
+        if (currentSubPeriod) subPeriods.push(currentSubPeriod);
+        toggleCalculationState(false);
+        return { totalInterest, subPeriods };
+    };
+    
+    const renderCalculationReport = (result, startDateStr, endDateStr) => {
+        elements.interestResult.textContent = formatCurrency(result.totalInterest);
+        elements.calculationDetails.innerHTML = '';
+        
+        const currentQuarterStart = new Date();
+        currentQuarterStart.setMonth(Math.floor(currentQuarterStart.getMonth() / 3) * 3, 1);
+        currentQuarterStart.setHours(0,0,0,0);
+        
+        if (new Date(endDateStr) >= currentQuarterStart) {
+            elements.calculationWarning.textContent = "Uwaga: Twoje obliczenia obejmują bieżący kwartał, więc oprocentowanie może ulec zmianie.";
+            elements.calculationWarning.classList.remove('hidden');
+        } else {
+            elements.calculationWarning.classList.add('hidden');
+        }
+
+        if (result.subPeriods.length === 0) {
+            elements.calculationDetails.innerHTML = '<span>Brak odsetek do naliczenia w tym okresie (saldo zerowe lub ujemne).</span>';
+            return;
+        }
+
+        if (result.subPeriods.length === 1) {
+            const period = result.subPeriods[0];
+            const realRate = period.contractualRate - period.reduction;
+            let header = startDateStr !== endDateStr ? `<p class="font-semibold">W okresie od ${startDateStr} do ${endDateStr}</p>` : `<p class="font-semibold">Dla dnia ${startDateStr}</p>`;
+            elements.calculationDetails.innerHTML = `
+                ${header}
+                <div>A. Oprocentowanie kredytu: <strong>${period.contractualRate.toFixed(2)}%</strong></div>
+                <div>B. Zastosowana obniżka: <strong>${period.reduction.toFixed(2)} p. proc.</strong></div>
+                <div>A - B. Oprocentowanie realne: <strong>${realRate.toFixed(2)}%</strong></div>
+            `;
+        } else {
+            let detailsHtml = '';
+            result.subPeriods.forEach((period, index) => {
+                const realRate = period.contractualRate - period.reduction;
+                detailsHtml += `
+                    <div class="mt-2 ${index > 0 ? 'pt-2 border-t border-blue-200' : ''}">
+                        <p class="font-semibold">${index + 1}. W okresie od ${period.startDate.toISOString().split('T')[0]} do ${period.endDate.toISOString().split('T')[0]}:</p>
+                        <div>A. Oprocentowanie kredytu: <strong>${period.contractualRate.toFixed(2)}%</strong></div>
+                        <div>B. Zastosowana obniżka: <strong>${period.reduction.toFixed(2)} p. proc.</strong></div>
+                        <div>A - B. Oprocentowanie realne: <strong>${realRate.toFixed(2)}%</strong></div>
+                    </div>
+                `;
+            });
+            detailsHtml += `<div class="font-bold mt-4 pt-2 border-t border-blue-300">Suma odsetek dla okresów wyniosła: ${formatCurrency(result.totalInterest)}</div>`;
+            elements.calculationDetails.innerHTML = detailsHtml;
+        }
+    };
+
+    const updateDateInputs = () => {
+        const type = elements.periodTypeSelector.value;
+        const container = elements.dateInputsContainer;
+        container.innerHTML = '';
+
+        const today = new Date().toISOString().split('T')[0];
+        const currentYear = new Date().getFullYear();
+
+        if (type === 'day') {
+            container.innerHTML = `<input type="date" id="calc-day" value="${today}" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">`;
+        } else if (type === 'month') {
+            container.innerHTML = `<input type="month" id="calc-month" value="${today.substring(0, 7)}" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">`;
+        } else if (type === 'quarter') {
+            container.innerHTML = `
+                <select id="calc-quarter" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="1">I Kwartał</option><option value="2">II Kwartał</option><option value="3">III Kwartał</option><option value="4">IV Kwartał</option>
+                </select>
+                <input type="number" id="calc-quarter-year" value="${currentYear}" placeholder="Rok" class="block w-28 px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">`;
+        } else if (type === 'year') {
+            container.innerHTML = `<input type="number" id="calc-year" value="${currentYear}" placeholder="Rok" class="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">`;
+        }
+    };
+
+    const handleCalculate = () => {
+        if (state.isCalculating) return;
+        const type = elements.periodTypeSelector.value;
+        let startDateStr, endDateStr;
+
+        if (type === 'day') {
+            startDateStr = endDateStr = document.getElementById('calc-day').value;
+            if (!startDateStr) { showAlert("Proszę wybrać datę."); return; }
+        } else if (type === 'month') {
+            const month = document.getElementById('calc-month').value;
+            if (!month) { showAlert("Proszę wybrać miesiąc i rok."); return; }
+            const [year, monthNum] = month.split('-');
+            startDateStr = `${year}-${monthNum}-01`;
+            endDateStr = new Date(year, monthNum, 0).toISOString().split('T')[0];
+        } else if (type === 'quarter') {
+            const year = parseInt(document.getElementById('calc-quarter-year').value);
+            if (isNaN(year) || year < 2000) { showAlert("Proszę podać poprawny rok."); return; }
+            const quarter = parseInt(document.getElementById('calc-quarter').value);
+            const startMonth = (quarter - 1) * 3;
+            startDateStr = new Date(year, startMonth, 1).toISOString().split('T')[0];
+            endDateStr = new Date(year, startMonth + 3, 0).toISOString().split('T')[0];
+        } else if (type === 'year') {
+            const year = parseInt(document.getElementById('calc-year').value);
+            if (isNaN(year) || year < 2000) { showAlert("Proszę podać poprawny rok."); return; }
+            startDateStr = `${year}-01-01`;
+            endDateStr = `${year}-12-31`;
+        }
+
+        const result = calculateInterestForPeriod(startDateStr, endDateStr);
+        renderCalculationReport(result, startDateStr, endDateStr);
+    };
+
+    const parseXmlAndLoadData = (xmlString) => {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+        
+        if (xmlDoc.getElementsByTagName("parsererror").length > 0) throw new Error("Błąd parsowania pliku XML.");
+        
+        state.transactions = Array.from(xmlDoc.getElementsByTagName("transaction")).map(node => ({
+            date: node.getAttribute('date'),
+            type: node.getAttribute('type'),
+            amount: parseFloat(node.getAttribute('amount')),
+        }));
+        
+        state.reductionDeclarations = Array.from(xmlDoc.getElementsByTagName("reductionDeclaration")).map(node => ({
+            date: node.getAttribute('date'),
+            value: parseFloat(node.getAttribute('value')),
+        }));
+
+        state.rateCache = {};
+        Array.from(xmlDoc.getElementsByTagName("rate")).forEach(node => {
+            state.rateCache[node.getAttribute('date')] = parseFloat(node.getAttribute('value'));
+        });
+
+        saveData();
+        renderTables();
+        fetchFullRateHistory();
+        showAlert("Dane zostały pomyślnie zaimportowane z pliku XML.", "success");
+    };
+
+    const handleXmlImport = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                parseXmlAndLoadData(e.target.result);
+            } catch(error) {
+                showAlert(`Błąd importu: ${error.message}`);
+            } finally {
+                event.target.value = null;
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const handleXmlExport = () => {
+        let xmlString = `<loanData>\n`;
+        xmlString += `  <transactions>\n`;
+        [...state.transactions].sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(t => {
+            xmlString += `    <transaction date="${t.date}" type="${t.type}" amount="${t.amount.toFixed(2)}" />\n`;
+        });
+        xmlString += `  </transactions>\n`;
+        xmlString += `  <reductionDeclarations>\n`;
+         [...state.reductionDeclarations].sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(d => {
+            xmlString += `    <reductionDeclaration date="${d.date}" value="${d.value.toFixed(2)}" />\n`;
+        });
+        xmlString += `  </reductionDeclarations>\n`;
+        xmlString += `  <rates>\n`;
+        state.nbpRateHistory.forEach(rate => {
+            xmlString += `    <rate date="${rate.date}" value="${rate.value.toFixed(2)}" />\n`;
+        });
+        xmlString += `  </rates>\n`;
+        xmlString += `</loanData>`;
+        
+        const now = new Date();
+        const timezone = 'Europe/Warsaw';
+        const y = now.toLocaleString('pl-PL', { year: 'numeric', timeZone: timezone });
+        const m = now.toLocaleString('pl-PL', { month: '2-digit', timeZone: timezone });
+        const d = now.toLocaleString('pl-PL', { day: '2-digit', timeZone: timezone });
+        const h = now.toLocaleString('pl-PL', { hour: '2-digit', hour12: false, timeZone: timezone }).padStart(2, '0');
+        const min = now.toLocaleString('pl-PL', { minute: '2-digit', timeZone: timezone }).padStart(2, '0');
+        const s = now.toLocaleString('pl-PL', { second: '2-digit', timeZone: timezone }).padStart(2, '0');
+        const fileName = `${y}${m}${d}${h}${min}${s}.xml`;
+
+        const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+    
+    elements.addTransactionBtn.addEventListener('click', () => {
+        const amount = parseFloat(elements.transAmount.value);
+        const date = elements.transDate.value;
+        if (isNaN(amount) || amount <= 0 || !date) return showAlert("Proszę podać poprawną, dodatnią kwotę i datę.");
+        state.transactions.push({ amount, date, type: elements.transType.value });
+        saveData();
+        renderTransactionsTable();
+        elements.transAmount.value = '';
+    });
+
+    elements.setReductionBtn.addEventListener('click', () => {
+        const date = elements.reductionDeclarationDate.value;
+        const value = parseFloat(elements.reductionValue.value);
+        if (!date || isNaN(value) || value < 0) return showAlert("Proszę podać poprawną datę i nieujemną wartość obniżki.");
+        
+        state.reductionDeclarations.push({ date, value });
+        saveData();
+        renderReductionsTable();
+        updateCurrentRateDisplay();
+        elements.reductionValue.value = '';
+    });
+    
+    document.body.addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-btn')) {
+            const type = e.target.dataset.type;
+            const index = parseInt(e.target.dataset.index, 10);
+            if (type === 'transaction') {
+                 const sorted = [...state.transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+                 const originalIndex = state.transactions.indexOf(sorted[index]);
+                 state.transactions.splice(originalIndex, 1);
+            } else if (type === 'reduction') {
+                const sorted = [...state.reductionDeclarations].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const originalIndex = state.reductionDeclarations.indexOf(sorted[index]);
+                state.reductionDeclarations.splice(originalIndex, 1);
+                updateCurrentRateDisplay();
+            }
+            saveData();
+            renderTables();
+        }
+    });
+    
+    elements.importXmlInput.addEventListener('change', handleXmlImport);
+    elements.exportXmlBtn.addEventListener('click', handleXmlExport);
+
+    elements.periodTypeSelector.addEventListener('change', updateDateInputs);
+    elements.calculateBtn.addEventListener('click', handleCalculate);
+
+    const init = () => {
+        const today = new Date().toISOString().split('T')[0];
+        elements.transDate.value = today;
+        elements.reductionDeclarationDate.value = today;
+        updateDateInputs();
+        loadData();
+        if (state.reductionDeclarations.length === 0) {
+             state.reductionDeclarations.push({ date: '2022-12-31', value: 29.00 });
+             renderReductionsTable();
+             saveData();
+        }
+        fetchFullRateHistory();
+    };
+
+    init();
+});
+</script>
+
+</body>
+</html>
