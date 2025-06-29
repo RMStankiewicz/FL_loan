@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
     <style>
-        /* CSS bez zmian, z wyjątkiem dodania tła do .printable-area */
         html { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--scrollbar-track-bg); }
@@ -188,7 +187,32 @@
     </div>
 
 <script>
-const themeToggle = document.getElementById('theme-toggle'); const themeIconLight = document.getElementById('theme-icon-light'); const themeIconDark = document.getElementById('theme-icon-dark'); const htmlEl = document.documentElement; const setInitialTheme = () => { if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) { htmlEl.classList.add('dark'); themeIconLight.classList.add('hidden'); themeIconDark.classList.remove('hidden'); } else { htmlEl.classList.remove('dark'); themeIconLight.classList.remove('hidden'); themeIconDark.classList.add('hidden'); } }; setInitialTheme(); themeToggle.addEventListener('click', () => { htmlEl.classList.toggle('dark'); const isDark = htmlEl.classList.contains('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); themeIconLight.classList.toggle('hidden', isDark); themeIconDark.classList.toggle('hidden', !isDark); });
+const themeToggle = document.getElementById('theme-toggle'); 
+const themeIconLight = document.getElementById('theme-icon-light'); 
+const themeIconDark = document.getElementById('theme-icon-dark'); 
+const htmlEl = document.documentElement; 
+
+const setInitialTheme = () => {
+    // ZMIANA: Usunięto sprawdzanie preferencji systemowych, domyślnie jest tryb jasny.
+    if (localStorage.getItem('theme') === 'dark') {
+        htmlEl.classList.add('dark');
+        themeIconLight.classList.add('hidden');
+        themeIconDark.classList.remove('hidden');
+    } else {
+        htmlEl.classList.remove('dark');
+        themeIconLight.classList.remove('hidden');
+        themeIconDark.classList.add('hidden');
+    }
+};
+
+setInitialTheme(); 
+themeToggle.addEventListener('click', () => { 
+    htmlEl.classList.toggle('dark'); 
+    const isDark = htmlEl.classList.contains('dark'); 
+    localStorage.setItem('theme', isDark ? 'dark' : 'light'); 
+    themeIconLight.classList.toggle('hidden', isDark); 
+    themeIconDark.classList.toggle('hidden', !isDark); 
+});
 
 const elements = {
     lombardRateDisplay: document.getElementById('lombard-rate-display'), interestRateDisplay: document.getElementById('interest-rate-display'), lastReductionDisplay: document.getElementById('last-reduction-display'), effectiveRateDisplay: document.getElementById('effective-rate-display'), rateHistoryPanel: document.getElementById('rate-history-panel'), addTransactionBtn: document.getElementById('add-transaction-btn'), setReductionBtn: document.getElementById('set-reduction-btn'), transactionsTableBody: document.getElementById('transactions-table-body'), reductionsTableBody: document.getElementById('reductions-table-body'), interestResult: document.getElementById('interest-result'), calculationDetails: document.getElementById('calculation-details'), calculationWarning: document.getElementById('calculation-warning'), importXmlInput: document.getElementById('import-xml-input'), exportXmlBtn: document.getElementById('export-xml-btn'), transAmount: document.getElementById('trans-amount'), transDate: document.getElementById('trans-date'), transType: document.getElementById('trans-type'), reductionDeclarationDate: document.getElementById('reduction-declaration-date'), reductionValue: document.getElementById('reduction-value'), alertBanner: document.getElementById('alert-banner'), successBanner: document.getElementById('success-banner'), periodTypeSelector: document.getElementById('period-type-selector'), dateInputsContainer: document.getElementById('date-inputs-container'), calculateBtn: document.getElementById('calculate-btn'),
@@ -272,22 +296,20 @@ const renderQuarterlyHtmlReport = (result, startDateStr, endDateStr, year, quart
     }
     
     let detailsHtml = `
-    <div id="printable-report-container" class="bg-slate-200 dark:bg-slate-700 rounded-lg">
-        <div id="printable-report" class="p-4 space-y-6">
+    <div id="printable-report-container" class="bg-slate-200 dark:bg-slate-800 rounded-lg">
+        <div id="printable-report" class="p-4 space-y-6 text-slate-800 dark:text-slate-200">
             <div class="text-center">
                 <h3 class="text-lg font-bold">Kwartalny raport dla pożyczki udzielonej w dniu 28 listopada 2022 r.</h3>
                 <p class="text-md">Nr raportu: ${quarter}/${String(year).slice(-2)}/p</p>
                 <p class="text-md">Okres: Kwartał ${RomanNumerals[quarter-1]} ${year}</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                <!-- Lewa kolumna -->
                 <div class="space-y-1">
                     <h4 class="font-bold mb-2">Zobowiązania:</h4>
                     <div class="flex justify-between"><span>Saldo otwarcia zobowiązań:</span> <span class="font-mono">${formatCurrency(openingBalance)}</span></div>
                     <div class="flex justify-between"><span>Saldo zamknięcia zobowiązań:</span> <span class="font-mono">${formatCurrency(closingBalance)}</span></div>
                     <div class="flex justify-between"><span>Suma zmian w zobowiązaniach:</span> <span class="font-mono">${formatCurrency(sumOfChanges)}</span></div>
                 </div>
-                <!-- Prawa kolumna -->
                 <div class="space-y-1">
                     <h4 class="font-bold mb-2">Oprocentowanie:</h4>
                     <div class="flex justify-between"><span>Obowiązujące 1 dnia kwartału:</span> <span>${interestRateStart.toFixed(2)}%</span></div>
@@ -295,12 +317,10 @@ const renderQuarterlyHtmlReport = (result, startDateStr, endDateStr, year, quart
                     <div class="flex justify-between"><span>Saldo zamknięcia zobowiązań:</span> <span class="font-mono">${formatCurrency(closingBalance)}</span></div>
                     <div class="flex justify-between"><span>Suma zmian w zobowiązaniach:</span> <span class="font-mono">${formatCurrency(sumOfChanges)}</span></div>
                 </div>
-                <!-- Lewa kolumna cd. -->
                 <div class="mt-4">
                     <div class="font-bold">Daty i kwoty zmian:</div>
                     <div class="pl-4">${quarterlyTransactions.length > 0 ? quarterlyTransactions.map(t => `<div>${t.date} - <span class="font-mono">${t.type === 'increase' ? '+' : '-'}${formatCurrency(t.amount)}</span></div>`).join('') : '<span>- brak zmian -</span>'}</div>
                 </div>
-                <!-- Prawa kolumna cd. -->
                  <div class="mt-4">
                     <div class="font-bold">Daty i kwoty zmian oprocentowania:</div>
                     <div class="pl-4">${rateChangesInQuarter.length > 0 ? rateChangesInQuarter.map(rc => `<div>${rc.date} - ${rc.rate.toFixed(2)}%</div>`).join('') : '<span>- brak zmian -</span>'}</div>
