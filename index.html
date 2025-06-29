@@ -1,142 +1,372 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Solarny Kalkulator Kredytowy z Raportami PDF</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://rsms.me/">
-  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <style>
-    html { font-family: 'Inter',sans-serif; }
-    /* … reszta Twojego CSS bez zmian … */
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solarny Kalkulator Kredytowy z Raportami PDF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        /* CSS bez zmian */
+        html { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--scrollbar-track-bg); }
+        ::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb-bg); border-radius: 4px; border: 2px solid var(--scrollbar-track-bg); }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover-bg); }
+        .loader { border: 4px solid var(--loader-bg); border-top: 4px solid var(--loader-color); border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input[type="file"] { display: none; }
+        .solar-flare-bg::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse 80% 80% at 20% -20%, var(--flare1), transparent), radial-gradient(ellipse 80% 80% at 80% 120%, var(--flare2), transparent); z-index: 0; animation: solar-flare 25s linear infinite; opacity: var(--flare-opacity); transition: opacity 0.5s ease-in-out; }
+        @keyframes solar-flare { 0% { transform: rotate(0deg) scale(1.2); } 100% { transform: rotate(360deg) scale(1.2); } }
+        :root { --bg-primary: #f8fafc; --bg-secondary: #ffffff; --bg-tertiary: #f1f5f9; --text-primary: #1e293b; --text-secondary: #475569; --text-accent: #b45309; --border-color: #e2e8f0; --accent-color: #d97706; --accent-hover: #b45309; --scrollbar-track-bg: #f8fafc; --scrollbar-thumb-bg: #cbd5e1; --scrollbar-thumb-hover-bg: #94a3b8; --loader-bg: #e2e8f0; --loader-color: #d97706; --flare1: rgba(252, 211, 77, 0.2); --flare2: rgba(59, 130, 246, 0.15); --flare-opacity: 0.6; }
+        .dark { --bg-primary: #0f172a; --bg-secondary: #1e293b; --bg-tertiary: #334155; --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-accent: #f59e0b; --border-color: #334155; --accent-color: #f59e0b; --accent-hover: #fbbf24; --scrollbar-track-bg: #0f172a; --scrollbar-thumb-bg: #475569; --scrollbar-thumb-hover-bg: #64748b; --loader-bg: #334155; --loader-color: #f59e0b; --flare1: rgba(245, 158, 11, 0.1); --flare2: rgba(96, 165, 250, 0.1); --flare-opacity: 1; }
+        body, .bg-card, .text-color, .border-color, button, input, select, textarea { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
+    </style>
 </head>
+
 <body class="bg-[var(--bg-primary)] text-[var(--text-primary)] relative solar-flare-bg">
-  <!-- … cały Twój HTML (aside, main itd.) bez zmian … -->
+    <div class="relative z-10 flex flex-col lg:flex-row min-h-screen">
+        <aside class="w-full lg:w-1/3 lg:max-w-md xl:max-w-lg lg:min-h-screen p-4 sm:p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-[var(--border-color)] bg-[var(--bg-secondary)]/80 backdrop-blur-sm">
+             <div class="space-y-8 sticky top-8">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold text-[var(--text-primary)]">Panel Sterowania</h1>
+                        <p class="text-sm text-[var(--text-secondary)]">Zarządzaj danymi pożyczki</p>
+                    </div>
+                    <button id="theme-toggle" class="p-2 rounded-full text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--accent-color)] focus:ring-offset-[var(--bg-secondary)]">
+                        <svg id="theme-icon-light" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <svg id="theme-icon-dark" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                </div>
+                
+                <div class="bg-card bg-[var(--bg-tertiary)] p-4 rounded-xl space-y-3">
+                    <h3 class="text-lg font-semibold text-[var(--text-primary)] mb-2">Stopy Procentowe</h3>
+                    <div class="text-sm space-y-2">
+                        <div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-[var(--text-secondary)]">Stopa lombardowa NBP:</span>
+                                <span id="lombard-rate-display" class="font-bold text-lg text-[var(--text-accent)]"><div class="loader"></div></span>
+                            </div>
+                            <div id="rate-history-panel" class="text-xs text-right text-[var(--text-secondary)] -mt-1 pr-1">
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                           <span class="text-[var(--text-secondary)]">Oprocentowanie umowne:</span>
+                           <span id="interest-rate-display" class="font-bold text-lg text-[var(--text-accent)]">...</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                           <span class="text-[var(--text-secondary)]">Zastosowana obniżka:</span>
+                           <span id="last-reduction-display" class="font-bold text-lg text-green-500">...</span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-[var(--border-color)]">
+                           <span class="font-semibold text-[var(--text-primary)]">Oprocentowanie realne:</span>
+                           <span id="effective-rate-display" class="font-bold text-xl text-green-500">...</span>
+                        </div>
+                    </div>
+                </div>
 
-  <script>
-  // … cały Twój JS do zarządzania transakcjami, datami, fetchFullRateHistory itd. …
+                 <div class="bg-card bg-[var(--bg-secondary)] p-4 rounded-xl border border-[var(--border-color)]">
+                    <h3 class="text-lg font-semibold mb-3 text-[var(--text-primary)]">Zarządzanie Danymi (XML)</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label for="import-xml-input" class="w-full bg-[var(--accent-color)] text-white font-bold py-2 px-4 rounded-lg hover:bg-[var(--accent-hover)] transition-colors text-center cursor-pointer">Importuj</label>
+                        <input type="file" id="import-xml-input" accept=".xml,application/xml">
+                        <button id="export-xml-btn" class="w-full bg-slate-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 transition-colors">Eksportuj</button>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-[var(--text-primary)]">Dodaj transakcję kapitałową</h3>
+                        <div class="space-y-3">
+                            <input type="number" id="trans-amount" placeholder="Kwota (PLN)" class="mt-1 block w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm">
+                            <input type="date" id="trans-date" class="mt-1 block w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm">
+                            <select id="trans-type" class="mt-1 block w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm">
+                                <option value="increase">Zwiększenie kapitału (Wpłata)</option>
+                                <option value="repayment">Spłata kapitału</option>
+                            </select>
+                            <button id="add-transaction-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Dodaj Transakcję</button>
+                        </div>
+                    </div>
 
-  // Pełny Base64 czcionki Roboto-Regular.ttf (tu skrócone)
-  const robotoNormalBase64 = "AAEAAAARAQAABAAQR0RFRg... (TU WSTAW CAŁY BASE64)";
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-[var(--text-primary)]">Zadeklaruj nową obniżkę</h3>
+                        <p class="text-xs text-[var(--text-secondary)] mb-2">Obowiązuje od początku kwartału, w którym wypada data.</p>
+                         <div class="space-y-3">
+                             <input type="date" id="reduction-declaration-date" class="mt-1 block w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm">
+                            <input type="number" id="reduction-value" step="0.01" placeholder="Wartość obniżki (%)" class="mt-1 block w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm">
+                            <button id="set-reduction-btn" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors">Zadeklaruj Obniżkę</button>
+                        </div>
+                    </div>
+                </div>
 
-  const generateQuarterlyPdf = () => {
+                 <footer class="text-center pt-8 text-xs text-[var(--text-secondary)]">
+                    <p>&copy; 2024-2025 Solarny Kalkulator Kredytowy. Wszelkie prawa zastrzeżone.</p>
+                 </footer>
+
+            </div>
+        </aside>
+
+        <main class="w-full lg:w-2/3 p-4 sm:p-6 lg:p-8">
+             <header class="text-left mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-[var(--text-primary)]">Kalkulator Odsetek Kredytowych</h1>
+                <p class="text-[var(--text-secondary)] mt-2">Aplikacja do analizy pożyczki z dnia 28 listopada 2022 r.</p>
+            </header>
+            
+            <div id="alert-banner" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">...</div>
+            <div id="success-banner" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-6" role="alert">...</div>
+
+            <div class="space-y-8">
+                <div class="bg-card bg-[var(--bg-secondary)] p-6 rounded-xl shadow-lg border border-[var(--border-color)]">
+                    <h2 class="text-2xl font-semibold mb-4 text-[var(--text-primary)] border-b border-[var(--border-color)] pb-2">Obliczenia i Raporty</h2>
+                    <div class="space-y-4">
+                        <div class="flex flex-col md:flex-row items-center gap-4">
+                            <select id="period-type-selector" class="block w-full md:w-auto px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm">
+                                <option value="day">Dzień</option>
+                                <option value="month">Miesiąc</option>
+                                <option value="quarter" selected>Kwartał</option>
+                                <option value="year">Rok</option>
+                            </select>
+                            <div id="date-inputs-container" class="flex-grow flex items-center gap-4 w-full"></div>
+                            <button id="calculate-btn" class="w-full md:w-auto flex-shrink-0 bg-[var(--text-primary)] text-[var(--bg-primary)] font-bold py-2 px-4 rounded-lg hover:bg-opacity-90 transition-colors">Oblicz</button>
+                            <button id="generate-pdf-btn" class="hidden w-full md:w-auto flex-shrink-0 bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-center">Raport księgowy PDF do pobrania</button>
+                        </div>
+                        <div id="result-container" class="bg-[var(--bg-tertiary)] border-l-4 border-[var(--accent-color)] text-[var(--text-primary)] p-4 rounded-r-lg mt-6">
+                            <p class="text-lg">Naliczone odsetki dla wybranego okresu:</p>
+                            <p id="interest-result" class="text-4xl font-bold mt-2 text-[var(--accent-color)]">0.00 PLN</p>
+                            <div id="calculation-details" class="mt-4 pt-4 border-t border-[var(--border-color)] text-sm space-y-2"></div>
+                            <div id="calculation-warning" class="hidden mt-4 pt-2 border-t border-[var(--border-color)] text-sm font-semibold text-amber-600 dark:text-amber-500"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                     <div class="bg-card bg-[var(--bg-secondary)] p-6 rounded-xl shadow-lg border border-[var(--border-color)]">
+                        <h3 class="text-xl font-semibold mb-4 text-[var(--text-primary)]">Historia Transakcji</h3>
+                        <div class="data-tables-container max-h-96 overflow-y-auto"><table class="min-w-full divide-y divide-[var(--border-color)]"><thead class="bg-[var(--bg-tertiary)]"><tr><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Data</th><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Typ</th><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Kwota (PLN)</th><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-right text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Akcja</th></tr></thead><tbody id="transactions-table-body" class="divide-y divide-[var(--border-color)]"></tbody></table></div>
+                    </div>
+                    <div class="bg-card bg-[var(--bg-secondary)] p-6 rounded-xl shadow-lg border border-[var(--border-color)]">
+                        <h3 class="text-xl font-semibold mb-4 text-[var(--text-primary)]">Historia Obniżek</h3>
+                        <div class="data-tables-container max-h-96 overflow-y-auto"><table class="min-w-full divide-y divide-[var(--border-color)]"><thead class="bg-[var(--bg-tertiary)]"><tr><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Data Deklaracji</th><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Wartość Obniżki</th><th class="sticky top-0 bg-[var(--bg-tertiary)]/80 backdrop-blur-sm px-6 py-3 text-right text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">Akcja</th></tr></thead><tbody id="reductions-table-body" class="divide-y divide-[var(--border-color)]"></tbody></table></div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+<script>
+const themeToggle = document.getElementById('theme-toggle'); const themeIconLight = document.getElementById('theme-icon-light'); const themeIconDark = document.getElementById('theme-icon-dark'); const htmlEl = document.documentElement; const setInitialTheme = () => { if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) { htmlEl.classList.add('dark'); themeIconLight.classList.add('hidden'); themeIconDark.classList.remove('hidden'); } else { htmlEl.classList.remove('dark'); themeIconLight.classList.remove('hidden'); themeIconDark.classList.add('hidden'); } }; setInitialTheme(); themeToggle.addEventListener('click', () => { htmlEl.classList.toggle('dark'); const isDark = htmlEl.classList.contains('dark'); localStorage.setItem('theme', isDark ? 'dark' : 'light'); themeIconLight.classList.toggle('hidden', isDark); themeIconDark.classList.toggle('hidden', !isDark); });
+
+const elements = {
+    generatePdfBtn: document.getElementById('generate-pdf-btn'),
+    lombardRateDisplay: document.getElementById('lombard-rate-display'), interestRateDisplay: document.getElementById('interest-rate-display'), lastReductionDisplay: document.getElementById('last-reduction-display'), effectiveRateDisplay: document.getElementById('effective-rate-display'), rateHistoryPanel: document.getElementById('rate-history-panel'), addTransactionBtn: document.getElementById('add-transaction-btn'), setReductionBtn: document.getElementById('set-reduction-btn'), transactionsTableBody: document.getElementById('transactions-table-body'), reductionsTableBody: document.getElementById('reductions-table-body'), interestResult: document.getElementById('interest-result'), calculationDetails: document.getElementById('calculation-details'), calculationWarning: document.getElementById('calculation-warning'), importXmlInput: document.getElementById('import-xml-input'), exportXmlBtn: document.getElementById('export-xml-btn'), transAmount: document.getElementById('trans-amount'), transDate: document.getElementById('trans-date'), transType: document.getElementById('trans-type'), reductionDeclarationDate: document.getElementById('reduction-declaration-date'), reductionValue: document.getElementById('reduction-value'), alertBanner: document.getElementById('alert-banner'), successBanner: document.getElementById('success-banner'), periodTypeSelector: document.getElementById('period-type-selector'), dateInputsContainer: document.getElementById('date-inputs-container'), calculateBtn: document.getElementById('calculate-btn'),
+};
+elements.alertBanner.innerHTML = `<strong class="font-bold">Błąd! </strong><span class="block sm:inline" id="alert-message"></span>`;
+elements.successBanner.innerHTML = `<strong class="font-bold">Sukces! </strong><span class="block sm:inline" id="success-message"></span>`;
+elements.alertMessage = document.getElementById('alert-message');
+elements.successMessage = document.getElementById('success-message');
+let state = { transactions: [], reductionDeclarations: [], nbpRateHistory: [], rateCache: {}, isCalculating: false, };
+const showAlert = (message, type = 'error') => { const banner = type === 'error' ? elements.alertBanner : elements.successBanner; const messageEl = type === 'error' ? elements.alertMessage : elements.successMessage; messageEl.textContent = message; banner.classList.remove('hidden'); setTimeout(() => banner.classList.add('hidden'), 5000); };
+const formatCurrency = (value) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(value);
+const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+const getDaysInYear = (year) => isLeapYear(year) ? 366 : 365;
+const toggleCalculationState = (isCalculating) => { state.isCalculating = isCalculating; elements.calculateBtn.disabled = isCalculating; if (isCalculating) { elements.interestResult.innerHTML = '<div class="loader mx-auto"></div>'; elements.calculationDetails.innerHTML = ''; elements.calculationWarning.classList.add('hidden'); } };
+
+const renderRateHistoryPanel = () => {
+    const panel = elements.rateHistoryPanel;
+    panel.innerHTML = '';
+    if (state.nbpRateHistory.length < 1) return;
+    const history = [...state.nbpRateHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const latest = history[0];
+    panel.innerHTML = `(obowiązuje od: <strong>${latest.date}</strong>)`;
+};
+
+const updateCurrentRateDisplay = () => { if(state.nbpRateHistory.length === 0) return; const latestRateInfo = state.nbpRateHistory[state.nbpRateHistory.length - 1]; const currentLombardRate = latestRateInfo.value; const contractualRate = Math.max(currentLombardRate * 4, 10.0); elements.lombardRateDisplay.textContent = `${currentLombardRate.toFixed(2)}%`; renderRateHistoryPanel(); elements.interestRateDisplay.textContent = `${contractualRate.toFixed(2)}%`; const lastDeclaredValue = state.reductionDeclarations.length > 0 ? [...state.reductionDeclarations].sort((a, b) => new Date(b.date) - new Date(a.date))[0].value : 0; const appliedReduction = Math.min(lastDeclaredValue, contractualRate); const effectiveRate = contractualRate - appliedReduction; elements.lastReductionDisplay.textContent = `${lastDeclaredValue.toFixed(2)}%`; elements.effectiveRateDisplay.textContent = `${effectiveRate.toFixed(2)}%`; };
+const fetchFullRateHistory = async () => { const url = "https://static.nbp.pl/dane/stopy/stopy_procentowe_archiwum.xml"; const proxyUrl = 'https://api.allorigins.win/raw?url='; try { const response = await fetch(`${proxyUrl}${encodeURIComponent(url)}`); if (!response.ok) { throw new Error(`Błąd HTTP! Status: ${response.status}`); } const xmlText = await response.text(); const parser = new DOMParser(); const xmlDoc = parser.parseFromString(xmlText, "application/xml"); if (xmlDoc.getElementsByTagName("parsererror").length > 0) { throw new Error("Błąd parsowania pliku XML z NBP."); } const rateHistory = []; const allPositions = xmlDoc.querySelectorAll('pozycje'); allPositions.forEach(positionsNode => { const validFromDate = positionsNode.getAttribute('obowiazuje_od'); const lombardNode = positionsNode.querySelector('pozycja[id="lom"]'); if (lombardNode) { const rateStr = lombardNode.getAttribute('oprocentowanie'); if (rateStr) { const rate = parseFloat(rateStr.replace(',', '.')); rateHistory.push({ date: validFromDate, value: rate }); } } }); state.nbpRateHistory = rateHistory.sort((a, b) => new Date(a.date) - new Date(b.date)); Object.keys(state.rateCache).forEach(date => { const nbpRate = state.nbpRateHistory.find(r => r.date === date); const xmlRate = state.rateCache[date]; if(nbpRate && nbpRate.value !== xmlRate) { showAlert(`Niezgodność danych dla daty ${date}! Stopa w pliku XML: ${xmlRate}%, oficjalna stopa NBP: ${nbpRate.value}%. Proszę o kontakt z Radosławem Stankiewiczem.`); } }); updateCurrentRateDisplay(); } catch (error) { showAlert(`Nie udało się pobrać historii stóp procentowych: ${error.message}`); elements.lombardRateDisplay.textContent = "Błąd"; } };
+const getRateForDate = (dateStr) => { const history = state.nbpRateHistory.length > 0 ? state.nbpRateHistory : Object.entries(state.rateCache).map(([date, value]) => ({date, value})).sort((a,b) => new Date(a.date) - new Date(b.date)); if (history.length === 0) return 5.75; const applicableRates = history.filter(r => new Date(r.date) <= new Date(dateStr)); if (applicableRates.length === 0) return history[0].value; return applicableRates[applicableRates.length - 1].value; };
+const saveData = () => { localStorage.setItem('loanCalculatorTransactions', JSON.stringify(state.transactions)); localStorage.setItem('loanCalculatorReductions', JSON.stringify(state.reductionDeclarations)); };
+const loadData = () => { const savedTransactions = localStorage.getItem('loanCalculatorTransactions'); const savedReductions = localStorage.getItem('loanCalculatorReductions'); state.transactions = savedTransactions ? JSON.parse(savedTransactions) : []; state.reductionDeclarations = savedReductions ? JSON.parse(savedReductions) : []; renderTables(); };
+const renderTables = () => { renderTransactionsTable(); renderReductionsTable(); };
+const renderTransactionsTable = () => { elements.transactionsTableBody.innerHTML = ''; if (state.transactions.length === 0) { elements.transactionsTableBody.innerHTML = `<tr><td colspan="4" class="text-center text-[var(--text-secondary)] py-4">Brak transakcji</td></tr>`; return; } const sorted = [...state.transactions].sort((a, b) => new Date(a.date) - new Date(b.date)); sorted.forEach((trans, index) => { row = document.createElement('tr'); row.className = "text-color"; row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm">${trans.date}</td><td class="px-6 py-4 whitespace-nowrap text-sm">${trans.type === 'increase' ? 'Zwiększenie' : 'Spłata'}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${trans.type === 'increase' ? 'text-green-500' : 'text-red-500'}">${formatCurrency(trans.amount)}</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button class="delete-btn bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600" data-type="transaction" data-index="${index}">Usuń</button></td>`; elements.transactionsTableBody.appendChild(row); }); };
+const renderReductionsTable = () => { elements.reductionsTableBody.innerHTML = ''; if (state.reductionDeclarations.length === 0) { elements.reductionsTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-[var(--text-secondary)] py-4">Brak deklaracji obniżek</td></tr>`; return; } const sorted = [...state.reductionDeclarations].sort((a, b) => new Date(a.date) - new Date(b.date)); sorted.forEach((dec, index) => { const row = document.createElement('tr'); row.className = "text-color"; row.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm">${dec.date}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-500 dark:text-blue-400">${dec.value.toFixed(2)}%</td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button class="delete-btn bg-red-500 text-white px-2 py-1 rounded-md hover:bg-red-600" data-type="reduction" data-index="${index}">Usuń</button></td>`; elements.reductionsTableBody.appendChild(row); }); };
+const getAppliedReductionForDate = (date, contractualRate) => { const searchDate = new Date(date); const applicableDeclarations = state.reductionDeclarations.filter(d => new Date(d.date) <= searchDate); if (applicableDeclarations.length === 0) return 0; applicableDeclarations.sort((a, b) => new Date(b.date) - new Date(a.date)); const lastDeclaredValue = applicableDeclarations[0].value; return Math.min(lastDeclaredValue, contractualRate); };
+const getBalanceOnDate = (date) => state.transactions.filter(t => new Date(t.date) <= date).reduce((bal, t) => bal + (t.type === 'increase' ? t.amount : -t.amount), 0);
+const calculateInterestForPeriod = (startDateStr, endDateStr) => { toggleCalculationState(true); let totalInterest = 0; const subPeriods = []; let currentSubPeriod = null; const startDate = new Date(startDateStr); const endDate = new Date(endDateStr); for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) { const currentDate = new Date(d); const balance = getBalanceOnDate(currentDate); if (balance <= 0) continue; const lombardRate = getRateForDate(currentDate.toISOString().slice(0,10)); const contractualRate = Math.max(lombardRate * 4, 10.0); const appliedReduction = getAppliedReductionForDate(currentDate, contractualRate); const effectiveRate = contractualRate - appliedReduction; const dailyInterest = (balance * (effectiveRate / 100)) / getDaysInYear(currentDate.getFullYear()); totalInterest += dailyInterest; if (!currentSubPeriod || currentSubPeriod.contractualRate.toFixed(2) !== contractualRate.toFixed(2) || currentSubPeriod.reduction.toFixed(2) !== appliedReduction.toFixed(2)) { if (currentSubPeriod) subPeriods.push(currentSubPeriod); currentSubPeriod = { startDate: new Date(currentDate), endDate: new Date(currentDate), contractualRate: contractualRate, reduction: appliedReduction, }; } else { currentSubPeriod.endDate = new Date(currentDate); } } if (currentSubPeriod) subPeriods.push(currentSubPeriod); toggleCalculationState(false); return { totalInterest, subPeriods }; };
+const renderCalculationReport = (result, startDateStr, endDateStr) => { elements.interestResult.textContent = formatCurrency(result.totalInterest); elements.calculationDetails.innerHTML = ''; const currentQuarterStart = new Date(); currentQuarterStart.setMonth(Math.floor(currentQuarterStart.getMonth() / 3) * 3, 1); currentQuarterStart.setHours(0,0,0,0); if (new Date(endDateStr) >= currentQuarterStart) { elements.calculationWarning.textContent = "Uwaga: Twoje obliczenia obejmują bieżący kwartał, więc oprocentowanie może ulec zmianie."; elements.calculationWarning.classList.remove('hidden'); } else { elements.calculationWarning.classList.add('hidden'); } if (result.subPeriods.length === 0) { elements.calculationDetails.innerHTML = '<span>Brak odsetek do naliczenia w tym okresie (saldo zerowe lub ujemne).</span>'; return; } if (result.subPeriods.length === 1) { const period = result.subPeriods[0]; const realRate = period.contractualRate - period.reduction; let header = startDateStr !== endDateStr ? `<p class="font-semibold">W okresie od ${startDateStr} do ${endDateStr}</p>` : `<p class="font-semibold">Dla dnia ${startDateStr}</p>`; elements.calculationDetails.innerHTML = ` ${header} <div>A. Oprocentowanie kredytu: <strong>${period.contractualRate.toFixed(2)}%</strong></div> <div>B. Zastosowana obniżka: <strong>${period.reduction.toFixed(2)} p. proc.</strong></div> <div>A - B. Oprocentowanie realne: <strong>${realRate.toFixed(2)}%</strong></div> `; } else { let detailsHtml = ''; result.subPeriods.forEach((period, index) => { const realRate = period.contractualRate - period.reduction; detailsHtml += ` <div class="mt-2 ${index > 0 ? 'pt-2 border-t border-[var(--border-color)]' : ''}"> <p class="font-semibold">${index + 1}. W okresie od ${period.startDate.toISOString().slice(0,10)} do ${period.endDate.toISOString().slice(0,10)}:</p> <div>A. Oprocentowanie kredytu: <strong>${period.contractualRate.toFixed(2)}%</strong></div> <div>B. Zastosowana obniżka: <strong>${period.reduction.toFixed(2)} p. proc.</strong></div> <div>A - B. Oprocentowanie realne: <strong>${realRate.toFixed(2)}%</strong></div> </div> `; }); detailsHtml += `<div class="font-bold mt-4 pt-2 border-t border-[var(--border-color)]">Suma odsetek dla okresów wyniosła: ${formatCurrency(result.totalInterest)}</div>`; elements.calculationDetails.innerHTML = detailsHtml; } };
+const updateDateInputs = () => { const type = elements.periodTypeSelector.value; const container = elements.dateInputsContainer; container.innerHTML = ''; const inputClasses = "block w-full px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-md shadow-sm focus:outline-none focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] sm:text-sm"; const today = new Date().toISOString().slice(0,10); const currentYear = new Date().getFullYear(); if (type === 'day') { container.innerHTML = `<input type="date" id="calc-day" value="${today}" class="${inputClasses}">`; } else if (type === 'month') { container.innerHTML = `<input type="month" id="calc-month" value="${today.slice(0, 7)}" class="${inputClasses}">`; } else if (type === 'quarter') { container.innerHTML = ` <select id="calc-quarter" class="${inputClasses} w-full"> <option value="1">I Kwartał</option><option value="2">II Kwartał</option><option value="3">III Kwartał</option><option value="4">IV Kwartał</option> </select> <input type="number" id="calc-quarter-year" value="${currentYear}" placeholder="Rok" class="${inputClasses} w-28">`; } else if (type === 'year') { container.innerHTML = `<input type="number" id="calc-year" value="${currentYear}" placeholder="Rok" class="${inputClasses}">`; } elements.generatePdfBtn.classList.toggle('hidden', type !== 'quarter'); };
+const handleCalculate = () => { if (state.isCalculating) return; const type = elements.periodTypeSelector.value; let startDateStr, endDateStr; if (type === 'day') { startDateStr = endDateStr = document.getElementById('calc-day').value; if (!startDateStr) { showAlert("Proszę wybrać datę."); return; } } else if (type === 'month') { const month = document.getElementById('calc-month').value; if (!month) { showAlert("Proszę wybrać miesiąc i rok."); return; } const [year, monthNum] = month.split('-'); startDateStr = `${year}-${monthNum}-01`; endDateStr = new Date(year, monthNum, 0).toISOString().slice(0,10); } else if (type === 'quarter') { const year = parseInt(document.getElementById('calc-quarter-year').value); if (isNaN(year) || year < 2000) { showAlert("Proszę podać poprawny rok."); return; } const quarter = parseInt(document.getElementById('calc-quarter').value); const startMonth = (quarter - 1) * 3; startDateStr = new Date(year, startMonth, 1).toISOString().slice(0,10); endDateStr = new Date(year, startMonth + 3, 0).toISOString().slice(0,10); } else if (type === 'year') { const year = parseInt(document.getElementById('calc-year').value); if (isNaN(year) || year < 2000) { showAlert("Proszę podać poprawny rok."); return; } startDateStr = `${year}-01-01`; endDateStr = `${year}-12-31`; } const result = calculateInterestForPeriod(startDateStr, endDateStr); renderCalculationReport(result, startDateStr, endDateStr); };
+const parseXmlAndLoadData = (xmlString) => { const parser = new DOMParser(); const xmlDoc = parser.parseFromString(xmlString, "application/xml"); if (xmlDoc.getElementsByTagName("parsererror").length > 0) throw new Error("Błąd parsowania pliku XML."); state.transactions = Array.from(xmlDoc.getElementsByTagName("transaction")).map(node => ({ date: node.getAttribute('date'), type: node.getAttribute('type'), amount: parseFloat(node.getAttribute('amount')), })); state.reductionDeclarations = Array.from(xmlDoc.getElementsByTagName("reductionDeclaration")).map(node => ({ date: node.getAttribute('date'), value: parseFloat(node.getAttribute('value')), })); state.rateCache = {}; Array.from(xmlDoc.getElementsByTagName("rate")).forEach(node => { state.rateCache[node.getAttribute('date')] = parseFloat(node.getAttribute('value')); }); saveData(); renderTables(); fetchFullRateHistory(); showAlert("Dane zostały pomyślnie zaimportowane z pliku XML.", "success"); };
+const handleXmlImport = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { parseXmlAndLoadData(e.target.result); } catch(error) { showAlert(`Błąd importu: ${error.message}`); } finally { event.target.value = null; } }; reader.readAsText(file); };
+const handleXmlExport = () => { let xmlString = `<loanData>\n`; xmlString += `  <transactions>\n`; [...state.transactions].sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(t => { xmlString += `    <transaction date="${t.date}" type="${t.type}" amount="${t.amount.toFixed(2)}" />\n`; }); xmlString += `  </transactions>\n`; xmlString += `  <reductionDeclarations>\n`; [...state.reductionDeclarations].sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(d => { xmlString += `    <reductionDeclaration date="${d.date}" value="${d.value.toFixed(2)}" />\n`; }); xmlString += `  </reductionDeclarations>\n`; xmlString += `  <rates>\n`; state.nbpRateHistory.forEach(rate => { xmlString += `    <rate date="${rate.date}" value="${rate.value.toFixed(2)}" />\n`; }); xmlString += `  </rates>\n`; xmlString += `</loanData>`; const now = new Date(); const timezone = 'Europe/Warsaw'; const y = now.toLocaleString('pl-PL', { year: 'numeric', timeZone: timezone }); const m = now.toLocaleString('pl-PL', { month: '2-digit', timeZone: timezone }); const d = now.toLocaleString('pl-PL', { day: '2-digit', timeZone: timezone }); const h = now.toLocaleString('pl-PL', { hour: '2-digit', hour12: false, timeZone: timezone }).padStart(2, '0'); const min = now.toLocaleString('pl-PL', { minute: '2-digit', timeZone: timezone }).padStart(2, '0'); const s = now.toLocaleString('pl-PL', { second: '2-digit', timeZone: timezone }).padStart(2, '0'); const fileName = `${y}${m}${d}${h}${min}${s}.xml`; const blob = new Blob([xmlString], { type: 'application/xml;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); };
+document.body.addEventListener('click', (e) => { if (e.target.closest('.delete-btn')) { const button = e.target.closest('.delete-btn'); const type = button.dataset.type; const index = parseInt(button.dataset.index, 10); if (type === 'transaction') { const sorted = [...state.transactions].sort((a, b) => new Date(a.date) - new Date(b.date)); const originalIndex = state.transactions.indexOf(sorted[index]); state.transactions.splice(originalIndex, 1); } else if (type === 'reduction') { const sorted = [...state.reductionDeclarations].sort((a, b) => new Date(a.date) - new Date(b.date)); const originalIndex = state.reductionDeclarations.indexOf(sorted[index]); state.reductionDeclarations.splice(originalIndex, 1); updateCurrentRateDisplay(); } saveData(); renderTables(); } });
+elements.addTransactionBtn.addEventListener('click', () => { const amount = parseFloat(elements.transAmount.value); const date = elements.transDate.value; if (isNaN(amount) || amount <= 0 || !date) return showAlert("Proszę podać poprawną, dodatnią kwotę i datę."); state.transactions.push({ amount, date, type: elements.transType.value }); saveData(); renderTransactionsTable(); elements.transAmount.value = ''; });
+elements.setReductionBtn.addEventListener('click', () => { const date = elements.reductionDeclarationDate.value; const value = parseFloat(elements.reductionValue.value); if (!date || isNaN(value) || value < 0) return showAlert("Proszę podać poprawną datę i nieujemną wartość obniżki."); state.reductionDeclarations.push({ date, value }); saveData(); renderReductionsTable(); updateCurrentRateDisplay(); elements.reductionValue.value = ''; });
+elements.importXmlInput.addEventListener('change', handleXmlImport);
+elements.exportXmlBtn.addEventListener('click', handleXmlExport);
+elements.periodTypeSelector.addEventListener('change', updateDateInputs);
+elements.calculateBtn.addEventListener('click', handleCalculate);
+
+// --- ZAKTUALIZOWANA LOGIKA GENEROWANIA PDF ---
+
+// Pełna czcionka Roboto Regular w formacie Base64. Jest to konieczne do poprawnego wyświetlania polskich znaków.
+const robotoNormalBase64 = "AAEAAAARAQAABAAQR0RFRgQsA... (TUTAJ MUSI BYĆ PEŁNY, BARDZO DŁUGI CIĄG ZNAKÓW)";
+
+const getEffectiveRateForDate = (dateStr) => { const lombardRate = getRateForDate(dateStr); const contractualRate = Math.max(lombardRate * 4, 10.0); const appliedReduction = getAppliedReductionForDate(new Date(dateStr), contractualRate); return contractualRate - appliedReduction; };
+
+const generateQuarterlyPdf = () => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-    // 1) Wczytanie i rejestracja czcionki:
-    doc.addFileToVFS("Roboto-Regular.ttf", robotoNormalBase64);
-    doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
-    doc.setFont("Roboto", "normal");
+    // Krok 1: Wczytanie i rejestracja czcionki
+    // To jest kluczowy krok, który rozwiązuje problem polskich znaków.
+    try {
+        doc.addFileToVFS("Roboto-Regular.ttf", robotoNormalBase64);
+        doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
+        doc.setFont("Roboto", "normal");
+    } catch (e) {
+        // Fallback na standardową czcionkę, jeśli osadzanie się nie powiedzie
+        console.error("Błąd osadzania czcionki, polskie znaki mogą nie działać:", e);
+        showAlert("Błąd czcionki, polskie znaki mogą być wyświetlane niepoprawnie.");
+        doc.setFont("times", "normal");
+    }
 
-    // 2) Przygotowanie danych:
-    const year    = parseInt(document.getElementById('calc-quarter-year').value);
+    // Krok 2: Przygotowanie danych (zgodnie z Twoją logiką)
+    const year = parseInt(document.getElementById('calc-quarter-year').value);
     const quarter = parseInt(document.getElementById('calc-quarter').value);
     if (isNaN(year) || isNaN(quarter)) {
-      showAlert("Proszę wybrać poprawny kwartał i rok.");
-      return;
+        showAlert("Proszę wybrać poprawny kwartał i rok.");
+        return;
     }
-    const startMonth = (quarter-1)*3;
-    const startDate  = new Date(year, startMonth, 1);
-    const endDate    = new Date(year, startMonth+3, 0);
-    const prevEnd    = new Date(year, startMonth, 0);
+    const startMonth = (quarter - 1) * 3;
+    const startDate = new Date(year, startMonth, 1);
+    const endDate = new Date(year, startMonth + 3, 0);
+    const prevEnd = new Date(year, startMonth, 0);
     const openingBal = getBalanceOnDate(prevEnd);
     const closingBal = getBalanceOnDate(endDate);
-    const txs        = state.transactions.filter(t => {
-      const d = new Date(t.date);
-      return d>=startDate && d<=endDate;
+    const txs = state.transactions.filter(t => {
+        const d = new Date(t.date);
+        return d >= startDate && d <= endDate;
     });
-    const sumOfChg   = txs.reduce((s,t)=>s + (t.type==='increase'?t.amount:-t.amount),0);
-    const rateStart  = getEffectiveRateForDate(startDate.toISOString().substr(0,10));
-    const rateEnd    = getEffectiveRateForDate(endDate.toISOString().substr(0,10));
-    const totalInt   = calculateInterestForPeriod(
-      startDate.toISOString().substr(0,10),
-      endDate.toISOString().substr(0,10)
+    const sumOfChg = txs.reduce((s, t) => s + (t.type === 'increase' ? t.amount : -t.amount), 0);
+    const rateStart = getEffectiveRateForDate(startDate.toISOString().slice(0, 10));
+    const rateEnd = getEffectiveRateForDate(endDate.toISOString().slice(0, 10));
+    const totalInt = calculateInterestForPeriod(
+        startDate.toISOString().slice(0, 10),
+        endDate.toISOString().slice(0, 10)
     ).totalInterest;
 
-    // 3) Nagłówek:
+    // Krok 3: Rysowanie PDF
     const pageW = doc.internal.pageSize.getWidth();
+    const margin = 15;
     let y = 20;
-    doc.setFontSize(14).setFont("Roboto","normal").text(
-      `Kwartalny raport dla pożyczki z dnia 28 listopada 2022`,
-      pageW/2, y, {align:'center'}
-    );
+
+    // Nagłówek
+    doc.setFontSize(14).text(`Kwartalny raport dla pożyczki z dnia 28 listopada 2022`, pageW / 2, y, { align: 'center' });
     y += 8;
-    doc.setFontSize(11)
-       .text(`Kwartał ${["I","II","III","IV"][quarter-1]} ${year}`, pageW/2, y, {align:'center'});
+    doc.setFontSize(11).text(`Kwartał ${["I", "II", "III", "IV"][quarter - 1]} ${year}`, pageW / 2, y, { align: 'center' });
     y += 12;
 
-    // 4) Lewa kolumna – zobowiązania:
-    const margin = 15;
-    const col1x  = margin;
-    const col1v  = margin+70;
-    doc.setFontSize(10).setFont("Roboto","normal")
-       .text("Zobowiązania:", col1x, y);
-    y += 6;
-    doc.setFontSize(9)
-       .text("Saldo otwarcia:", col1x, y)
-       .text(formatCurrency(openingBal), col1v, y, {align:'right'});
-    y += 5;
-    doc.text("Saldo zamknięcia:", col1x, y)
-       .text(formatCurrency(closingBal), col1v, y, {align:'right'});
-    y += 5;
-    doc.text("Suma zmian:", col1x, y)
-       .text(formatCurrency(sumOfChg), col1v, y, {align:'right'});
-    y += 8;
-    doc.setFont("Roboto","italic")
-       .text("Szczegóły zmian:", col1x, y);
-    y += 5;
-    doc.setFont("Roboto","normal");
+    const col1x = margin;
+    const col1v = margin + 70;
+    const col2x = pageW / 2 + 10;
+    const col2v = pageW - margin;
+    let y1 = y; // y dla lewej kolumny
+    let y2 = y; // y dla prawej kolumny
+
+    // Lewa kolumna
+    doc.setFontSize(10).text("Zobowiązania:", col1x, y1);
+    y1 += 6;
+    doc.setFontSize(9);
+    doc.text("Saldo otwarcia:", col1x, y1).text(formatCurrency(openingBal), col1v, y1, { align: 'right' });
+    y1 += 5;
+    doc.text("Saldo zamknięcia:", col1x, y1).text(formatCurrency(closingBal), col1v, y1, { align: 'right' });
+    y1 += 5;
+    doc.text("Suma zmian:", col1x, y1).text(formatCurrency(sumOfChg), col1v, y1, { align: 'right' });
+    y1 += 8;
+    doc.setFont("Roboto", "italic").text("Szczegóły zmian:", col1x, y1);
+    y1 += 5;
+    doc.setFont("Roboto", "normal");
     if (txs.length) {
-      txs.forEach(t => {
-        doc.text(
-          `${t.date} → ${t.type==='increase'?'+':'-'}${formatCurrency(t.amount)}`,
-          col1x+3, y
-        );
-        y += 5;
-      });
+        txs.forEach(t => {
+            doc.text(`${t.date} → ${t.type === 'increase' ? '+' : '-'}${formatCurrency(t.amount)}`, col1x + 3, y1);
+            y1 += 5;
+        });
     } else {
-      doc.text("- brak -", col1x+3, y);
-      y += 5;
+        doc.text("- brak -", col1x + 3, y1);
+        y1 += 5;
     }
 
-    // 5) Prawa kolumna – oprocentowanie:
-    let y2 = 20 + 12;
-    const col2x  = pageW/2 + 10;
-    const col2v  = pageW - margin;
-    doc.setFontSize(10).setFont("Roboto","normal")
-       .text("Oprocentowanie:", col2x, y2);
-    y2 += 6; doc.setFontSize(9)
-       .text("Początek kwartału:", col2x, y2)
-       .text(`${rateStart.toFixed(2)}%`, col2v, y2, {align:'right'});
+    // Prawa kolumna
+    doc.setFontSize(10).text("Oprocentowanie:", col2x, y2);
+    y2 += 6;
+    doc.setFontSize(9);
+    doc.text("Początek kwartału:", col2x, y2).text(`${rateStart.toFixed(2)}%`, col2v, y2, { align: 'right' });
     y2 += 5;
-    doc.text("Koniec kwartału:", col2x, y2)
-       .text(`${rateEnd.toFixed(2)}%`, col2v, y2, {align:'right'});
+    doc.text("Koniec kwartału:", col2x, y2).text(`${rateEnd.toFixed(2)}%`, col2v, y2, { align: 'right' });
     y2 += 12;
 
-    // 6) Stopka: odsetki i zapis pliku
-    doc.setFontSize(12).setFont("Roboto","normal")
-       .text(
-         "Odsetki do zapłaty:",
-         margin, Math.max(y, y2) + 15
-       )
-       .text(
-         formatCurrency(totalInt),
-         pageW - margin,
-         Math.max(y, y2) + 15,
-         { align:'right' }
-       );
+    // Sekcja pod kolumnami
+    y = Math.max(y1, y2) + 10;
+    
+    // Ta sekcja została przywrócona z poprzedniej wersji i dostosowana
+    doc.setFontSize(11).setFont("Roboto", "normal");
+    doc.text("Operacje księgowe", margin, y);
+    y += 5;
+    doc.setFontSize(9);
+    doc.text("Spłaty lub dopłaty zobowiązania w okresie:", margin, y);
+    y += 7;
+    const colKwotaX = margin + 35;
+    const colNrX = margin + 70;
+    doc.setFont("Roboto", "normal"); // bold
+    doc.text("Data", margin, y);
+    doc.text("Kwota", colKwotaX, y);
+    doc.text("Numer ewidencyjny/księgowy", colNrX, y);
+    y += 2;
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+    if (txs.length > 0) {
+        txs.forEach(t => {
+            doc.text(t.date, margin, y);
+            doc.text(`${t.type === 'increase' ? '+' : '-'}${formatCurrency(t.amount)}`, colKwotaX, y);
+            doc.text("...................................................", colNrX, y);
+            y += 7;
+        });
+    } else {
+        doc.text("- brak -", margin, y);
+        y += 7;
+    }
+    
+    y += 5;
 
+    // Stopka
+    doc.setFontSize(12);
+    doc.text("Odsetki do zapłaty:", margin, y);
+    doc.text(formatCurrency(totalInt), pageW - margin, y, { align: 'right' });
+    
+    // Zapis pliku
     doc.save(`Raport_Q${quarter}_${year}.pdf`);
-  };
+};
 
-  // podpinamy przycisk
-  document.getElementById('generate-pdf-btn')
-          .addEventListener('click', generateQuarterlyPdf);
+elements.generatePdfBtn.addEventListener('click', generateQuarterlyPdf);
 
-  // … reszta init(), eventy itd. …
-  </script>
+const init = () => {
+    const today = new Date().toISOString().slice(0,10);
+    elements.transDate.value = today;
+    elements.reductionDeclarationDate.value = today;
+    elements.periodTypeSelector.value = 'quarter';
+    updateDateInputs();
+    loadData();
+    if (state.reductionDeclarations.length === 0) {
+        state.reductionDeclarations.push({ date: '2022-12-31', value: 29.00 });
+        renderReductionsTable();
+        saveData();
+    }
+    fetchFullRateHistory();
+};
+
+init();
+</script>
 </body>
 </html>
