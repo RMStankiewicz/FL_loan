@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     
     <style>
-        /* CSS bez zmian */
+        /* CSS bez zmian, z wyjątkiem dodania tła do .printable-area */
         html { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--scrollbar-track-bg); }
@@ -24,15 +24,15 @@
         .dark { --bg-primary: #0f172a; --bg-secondary: #1e293b; --bg-tertiary: #334155; --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-accent: #f59e0b; --border-color: #334155; --accent-color: #f59e0b; --accent-hover: #fbbf24; --scrollbar-track-bg: #0f172a; --scrollbar-thumb-bg: #475569; --scrollbar-thumb-hover-bg: #64748b; --loader-bg: #334155; --loader-color: #f59e0b; --flare1: rgba(245, 158, 11, 0.1); --flare2: rgba(96, 165, 250, 0.1); --flare-opacity: 1; }
         body, .bg-card, .text-color, .border-color, button, input, select, textarea { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease; }
 
-        /* NOWOŚĆ: Style do druku */
+        /* Style do druku */
         @media print {
             body * {
                 visibility: hidden;
             }
-            .printable-area, .printable-area * {
+            #printable-report-container, #printable-report-container * {
                 visibility: visible;
             }
-            .printable-area {
+            #printable-report-container {
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -41,19 +41,17 @@
                 background-color: white !important;
                 color: black !important;
             }
-            /* Ukrywanie przycisków i innych niepotrzebnych elementów */
             .no-print {
                 display: none !important;
             }
-            /* Nadpisanie kolorów dla trybu ciemnego podczas druku */
-            .dark .printable-area, .dark .printable-area * {
+            .dark #printable-report-container, .dark #printable-report-container * {
                  background-color: white !important;
                  color: black !important;
             }
-             .printable-area h3, .printable-area h4, .printable-area p, .printable-area div, .printable-area span {
+             #printable-report-container h3, #printable-report-container h4, #printable-report-container p, #printable-report-container div, #printable-report-container span {
                 color: black !important;
             }
-            .printable-area .font-mono {
+            #printable-report-container .font-mono {
                 font-family: 'Courier New', Courier, monospace;
             }
         }
@@ -274,8 +272,8 @@ const renderQuarterlyHtmlReport = (result, startDateStr, endDateStr, year, quart
     }
     
     let detailsHtml = `
-    <div id="printable-report" class="printable-area">
-        <div class="p-4 bg-slate-200 dark:bg-slate-700 rounded-lg space-y-6">
+    <div id="printable-report-container" class="bg-slate-200 dark:bg-slate-700 rounded-lg">
+        <div id="printable-report" class="p-4 space-y-6">
             <div class="text-center">
                 <h3 class="text-lg font-bold">Kwartalny raport dla pożyczki udzielonej w dniu 28 listopada 2022 r.</h3>
                 <p class="text-md">Nr raportu: ${quarter}/${String(year).slice(-2)}/p</p>
@@ -325,13 +323,12 @@ const renderQuarterlyHtmlReport = (result, startDateStr, endDateStr, year, quart
                     </div>`).join('') : '<div class="col-span-3">- brak -</div>'}
             </div>
         </div>
-        <div class="text-right mt-4 no-print">
+        <div class="text-right p-4 no-print">
             <button id="print-report-btn" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">Generuj wydruk</button>
         </div>
     </div>`;
     elements.calculationDetails.innerHTML = detailsHtml;
 
-    // Podpięcie eventu do nowego przycisku
     document.getElementById('print-report-btn').addEventListener('click', () => {
         window.print();
     });
